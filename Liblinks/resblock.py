@@ -3,6 +3,7 @@
 # import torch.nn as nn
 # from torch.nn import functional as F  # ？
 from Liblinks.sn_lib import *
+from torch.nn.utils import spectral_norm
 
 
 # from Liblinks.utis import *
@@ -101,7 +102,7 @@ def upsample_conv(x, conv):
 
 
 class GBlock2(nn.Module):  # 生成器的resblock2
-    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3,3), pad=(1,1), upsample=False, n_cls=0):
+    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=(1, 1), upsample=False, n_cls=0):
         super(GBlock2, self).__init__()
         self.upsample = upsample
         hidden_channel = out_channel if hidden_channel is None else hidden_channel
@@ -113,7 +114,7 @@ class GBlock2(nn.Module):  # 生成器的resblock2
                                       # nn.ConvTranspose2d(in_channel, hidden_channel, kernel_size=ksize, stride=2,
                                       #                   padding=pad,
                                       #                   output_padding=1),  # ？
-                                      nn.Upsample(scale_factor=2, mode='nearest'),
+                                      nn.Upsample(scale_factor=2, mode='bilinear'),
                                       nn.Conv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad),
                                       nn.BatchNorm2d(hidden_channel),
                                       nn.ReLU(inplace=True),
@@ -121,7 +122,7 @@ class GBlock2(nn.Module):  # 生成器的resblock2
                                       )
         if self.learnable_sc:
             if self.upsample:
-                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='nearest'),
+                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
                                           nn.Conv2d(in_channel, out_channel, kernel_size=1, padding=0))
                 # nn.ConvTranspose2d(in_channel, out_channel, kernel_size=1, stride=2, padding=0,
                 #                   output_padding=1)  # ？
@@ -148,7 +149,7 @@ class GBlockEm(nn.Module):  # 可以输入条件类标的，带有条件BN层的
         self.act1 = nn.ReLU(inplace=True)
         self.act2 = nn.ReLU(inplace=True)
         if self.upsample:
-            self.c1 = nn.Sequential(nn.Upsample(scale_factor=2, mode='nearest'),
+            self.c1 = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
                                     nn.Conv2d(in_channel, out_channel, kernel_size=ksize, padding=pad))
         else:
             self.c1 = nn.Conv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad)
@@ -163,7 +164,7 @@ class GBlockEm(nn.Module):  # 可以输入条件类标的，带有条件BN层的
 
         if self.learnable_sc:
             if self.upsample:
-                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='nearest'),
+                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
                                           nn.Conv2d(in_channel, out_channel, kernel_size=1, padding=0))
             else:
                 self.c_sc = nn.Conv2d(in_channel, out_channel, kernel_size=1, padding=0)
@@ -199,7 +200,7 @@ class GBlockAttr(nn.Module):
         self.act1 = nn.ReLU(inplace=True)
         self.act2 = nn.ReLU(inplace=True)
         if self.upsample:
-            self.c1 = nn.Sequential(nn.Upsample(scale_factor=2, mode='nearest'),
+            self.c1 = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
                                     nn.Conv2d(in_channel, out_channel, kernel_size=ksize, padding=pad))
         else:
             self.c1 = nn.Conv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad)
@@ -214,7 +215,7 @@ class GBlockAttr(nn.Module):
 
         if self.learnable_sc:
             if self.upsample:
-                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='nearest'),
+                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
                                           nn.Conv2d(in_channel, out_channel, kernel_size=(1, 1), padding=(0, 0)))
             else:
                 self.c_sc = nn.Conv2d(in_channel, out_channel, kernel_size=(1, 1), padding=(0, 0))
@@ -238,3 +239,117 @@ class GBlockAttr(nn.Module):
 
     def forward(self, x, y, **kwargs):
         return self.residual(x, y, **kwargs) + self.shotcut(x)
+
+
+class GBlockAttrDeconv(nn.Module):
+    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=1, upsample=False, num_attr=0):
+        super(GBlockAttrDeconv, self).__init__()
+        self.upsample = upsample
+        hidden_channel = out_channel if hidden_channel is None else hidden_channel
+        self.learnable_sc = in_channel != out_channel or upsample
+        self.num_attr = num_attr
+        self.act1 = nn.ReLU(inplace=True)
+        self.act2 = nn.ReLU(inplace=True)
+        if self.upsample:
+            self.c1 = nn.ConvTranspose2d(in_channel, hidden_channel, kernel_size=ksize, stride=2,
+                                         padding=pad,
+                                         output_padding=1)
+            # nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
+            # nn.Conv2d(in_channel, out_channel, kernel_size=ksize, padding=pad))
+        else:
+            self.c1 = nn.Conv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad)
+        self.c2 = nn.Conv2d(hidden_channel, out_channel, kernel_size=ksize, padding=pad)
+
+        if num_attr > 0:
+            self.b1 = CategoricalConditionalBatchNorm2dAttr(num_attr, in_channel)
+            self.b2 = CategoricalConditionalBatchNorm2dAttr(num_attr, hidden_channel)
+        else:
+            self.b1 = nn.BatchNorm2d(in_channel)
+            self.b2 = nn.BatchNorm2d(hidden_channel)
+
+        if self.learnable_sc:
+            if self.upsample:
+                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
+                                          nn.Conv2d(in_channel, out_channel, kernel_size=(1, 1), padding=(0, 0)))
+            else:
+                self.c_sc = nn.Conv2d(in_channel, out_channel, kernel_size=(1, 1), padding=(0, 0))
+
+    def residual(self, x, y=None, **kwargs):
+        h = x
+        h = self.b1(h, y, **kwargs) if y is not None else self.b1(h, **kwargs)
+        h = self.act1(h)
+        h = self.c1(h)
+        h = self.b2(h, y, **kwargs) if y is not None else self.b2(h, **kwargs)
+        h = self.act2(h)
+        h = self.c2(h)
+        return h
+
+    def shotcut(self, x):
+        if self.learnable_sc:
+            x = self.c_sc(x)
+            return x
+        else:
+            return x
+
+    def forward(self, x, y, **kwargs):
+        return self.residual(x, y, **kwargs) + self.shotcut(x)
+
+
+class SNDBlock(nn.Module):
+    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=3, pad=1, downsample=False):
+        super(SNDBlock, self).__init__()
+        self.downsample = downsample
+        self.skip_connection = (in_channel != out_channel) or downsample
+        hidden_channel = in_channel if hidden_channel is None else hidden_channel
+        self.residual = nn.Sequential(nn.ReLU(inplace=True),
+                                      spectral_norm(
+                                          nn.Conv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad)),
+                                      nn.ReLU(inplace=True),
+                                      spectral_norm(
+                                          nn.Conv2d(hidden_channel, out_channel, kernel_size=ksize, padding=pad)),
+                                      )
+
+        # self.c1 = spectral_norm(nn.Conv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad))
+        # SNConv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad)
+        # self.c2 = spectral_norm(nn.Conv2d(hidden_channel, out_channel, kernel_size=ksize, padding=pad))
+        # SNConv2d(hidden_channel, out_channel, kernel_size=ksize, padding=pad)
+        self.act_func = nn.ReLU(inplace=True)
+        if self.skip_connection:
+            self.c_sc = spectral_norm(nn.Conv2d(in_channel, out_channel, kernel_size=1, padding=0))
+            # SNConv2d(in_channel, out_channel, kernel_size=1, padding=0)  #
+        if downsample:
+            self._downsample = nn.AvgPool2d(2)
+
+    def residual_down(self, x):
+        h = self.residual(x)
+        if self.downsample:
+            h = self._downsample(h)
+        return h
+
+    def shortcut(self, x):
+        if self.skip_connection:
+            x = self.c_sc(x)
+            if self.downsample:
+                return self._downsample(x)
+            else:
+                return x
+        else:
+            return x
+
+    def forward(self, x):
+        return self.residual_down(x) + self.shortcut(x)
+
+
+class SNDOptimizedBlock(nn.Module):
+    def __init__(self, in_channel, out_channel, ksize=3, pad=1):
+        super(SNDOptimizedBlock, self).__init__()
+        self.residual = nn.Sequential(spectral_norm(nn.Conv2d(in_channel, out_channel, kernel_size=ksize, padding=pad)),
+                                      nn.ReLU(inplace=True),
+                                      spectral_norm(
+                                          nn.Conv2d(out_channel, out_channel, kernel_size=ksize, padding=pad)),
+                                      nn.AvgPool2d(2))
+        self.shortcut = nn.Sequential(nn.AvgPool2d(2),
+                                      spectral_norm(nn.Conv2d(in_channel, out_channel, kernel_size=1, padding=0)))
+
+    def forward(self, x):
+        return self.residual(x) + self.shortcut(x)

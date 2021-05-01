@@ -1,5 +1,7 @@
 import os
 import numpy as np
+import torch
+from torch.nn import functional as F
 
 
 # from scipy import linalg
@@ -236,16 +238,24 @@ def data_pack_attr(path_list, class_info, attri_dict):
 def max_singular_value(W, u=None, Ip=1):  # IP为迭代次数   W为tensor
     if not Ip >= 1:
         raise ValueError("The number of power iterations should be positive integer")
+    with torch.no_grad():
+        if u is None:
+            u = F.normalize(torch.ones(()).new_empty(W.size(0)).normal_(0, 1), dim=0, eps=1e-12)
+        _u = u
+        for _ in range(Ip):
+            _v = F.normalize(torch.mv(W.t(), _u), dim=0, eps=1e-12)
+            _u = F.normalize(torch.mv(W, _v), dim=0, eps=1e-12)
+    sigma = torch.dot(_u, torch.mv(W, _v))
 
-    W_np = W.detach().cpu().numpy()
-    if u is None:
-        u = np.random.normal(size=(1, W.shape[0])).astype(np.float32)
-    _u = u
-    for _ in range(Ip):
-        _v = _l2normalize(np.dot(_u, W_np), eps=1e-12)
-        _u = _l2normalize(np.dot(_v, W_np.T), eps=1e-12)
+    # W_np = W.detach().cpu().numpy()
+    # if u is None:
+    #    u = np.random.normal(size=(1, W.shape[0])).astype(np.float32)
+    # _u = u
+    # for _ in range(Ip):
+    #    _v = _l2normalize(np.dot(_u, W_np), eps=1e-12)
+    #    _u = _l2normalize(np.dot(_v, W_np.T), eps=1e-12)
 
-    sigma = np.dot(_u, np.dot(W_np, _v.T)).sum()
+    # sigma = np.dot(_u, np.dot(W_np, _v.T)).sum()
     return sigma, _u, _v
 
 
@@ -278,3 +288,19 @@ def get_tar_set(tar_class_index, all_labels, all_samples, seman_list, seman_inde
     np_tar_seman = np.array(tar_seman)
     np_tar_label = np.array(tar_label)
     return tar_data, np_tar_seman, np_tar_label
+
+
+def get_tar_set_np(tar_class_index, all_labels, all_samples, seman_feature, seman_index):
+    tar_label = []
+    tar_data = []
+    tar_seman = []
+    for i_label, label in enumerate(all_labels):
+        if label in tar_class_index:
+            index_sm = np.argwhere(seman_index == label)  # 用于找内嵌的索引 np.argwhere
+            tar_seman.append(seman_feature[index_sm[0][0]])
+            tar_label.append(label)
+            tar_data.append((all_samples[i_label, :]))  # 取出对应位置的样本
+    np_tar_data = np.array(tar_data)
+    np_tar_seman = np.array(tar_seman)
+    np_tar_label = np.array(tar_label)
+    return np_tar_data, np_tar_seman, np_tar_label

@@ -1,5 +1,6 @@
 # import numpy as np
 # import torch
+import torch
 import torch.nn as nn
 from torch.nn import functional as F  # ？
 # from utis import *
@@ -111,15 +112,25 @@ class SNConv2d(nn.Conv2d):  # 2维卷积层
         self.Ip = Ip
         self.use_gamma = use_gamma
         self.factor = factor
+        self.out_channels = out_channels
         super(SNConv2d, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias,
                                        padding_mode)
-        self.u = np.random.normal(size=(1, out_channels)).astype(dtype="f")
+        self.u = F.normalize(self.weight.new_empty(self.out_channels).normal_(0, 1), dim=0)
+        if torch.cuda.is_available():
+            self.u=self.u.cuda()
+        # self.u = np.random.normal(size=(1, out_channels)).astype(dtype="f")
 
     def W_bar(self):
-        W_mat = self.weight.data.reshape(self.weight.shape[0], -1)
-        sigma, _u, _ = max_singular_value(W_mat, self.u, self.Ip)
-        if self.training:
-            self.u[:] = _u
+        with torch.no_grad():
+
+            W_mat = self.weight.reshape(self.weight.size(0), -1)
+            sigma, _u, _ = max_singular_value(W_mat, self.u, self.Ip)
+            if self.training:
+                self.u = _u
+        # W_mat = self.weight.data.reshape(self.weight.shape[0], -1)
+        # sigma, _u, _ = max_singular_value(W_mat, self.u, self.Ip)
+        ##if self.training:
+        #    self.u[:] = _u
         # self.u[:]=_u
         return self.weight / sigma
 
@@ -140,17 +151,29 @@ class SNLinear(nn.Linear):  # 线性全连接层
         self.Ip = Ip
         self.use_gamma = use_gamma
         self.factor = factor
+        self.out_features = out_features
         super(SNLinear, self).__init__(in_features, out_features, bias)
-        self.u = np.random.normal(size=(1, out_features)).astype(dtype="f")
+        self.u = F.normalize(self.weight.new_empty(self.out_features).normal_(0, 1), dim=0)
+        if torch.cuda.is_available():
+            self.u=self.u.cuda()
+        # self.u = np.random.normal(size=(1, out_features)).astype(dtype="f")
 
     def W_bar(self):
-        W_mat = self.weight.data.reshape(self.weight.shape[0], -1)
-        sigma, _u, _ = max_singular_value(W_mat, self.u, self.Ip)
+        with torch.no_grad():
+
+            W_mat = self.weight.reshape(self.weight.size(0), -1)
+            sigma, _u, _ = max_singular_value(W_mat, self.u, self.Ip)
+            if self.training:
+                self.u = _u
+                # self.u[:] = _u
+
+        # W_mat = self.weight.reshape(self.weight.size(0), -1)
+        # sigma, _u, _ = max_singular_value(W_mat, self.u, self.Ip)
         # sigma=torch.from_numpy(sigma)
         # print(sigma)
         # print(_u)
-        if self.training:
-            self.u[:] = _u
+        # if self.training:
+        #   self.u[:] = _u
         # self.u[:]=_u
         # print(self.weight)
         # print(self.weight/sigma)
@@ -166,16 +189,25 @@ class SNEmbedCLS(nn.Embedding):  # embedding层做查询表
                  sparse=False, _weight=None, Ip=1, factor=None):
         self.Ip = Ip
         self.factor = factor
+        self.num_embeddings = num_embeddings
         super(SNEmbedCLS, self).__init__(num_embeddings, embedding_dim, padding_idx, max_norm, norm_type,
                                          scale_grad_by_freq, sparse, _weight)
+        self.u = F.normalize(self.weight.new_empty(self.num_embeddings).normal_(0, 1), dim=0)
+        if torch.cuda.is_available():
+            self.u=self.u.cuda()
 
-        self.u = np.random.normal(size=(1, num_embeddings)).astype(dtype="f")
+        #self.u = torch.ones(())
+        # np.random.normal(size=(1, num_embeddings)).astype(dtype="f")
 
     def W_bar(self):
-        W_mat = self.weight.data.reshape(self.weight.shape[0], -1)
-        sigma, _u, _ = max_singular_value(W_mat, self.u, self.Ip)
-        if self.training:
-            self.u[:] = _u
+        with torch.no_grad():
+
+            W_mat = self.weight.reshape(self.weight.size(0), -1)
+            sigma, _u, _ = max_singular_value(W_mat, self.u, self.Ip)
+            if self.training:
+                self.u = _u
+                # self.u[:] = _u
+
         return self.weight / sigma
 
     def forward(self, input):
