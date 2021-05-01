@@ -9,7 +9,10 @@ I don't remember what is the difference between version 1002 and 1003, but they 
 it will be updated when the results at further epoch are obtained
 
 
-two new version of codes is used to train
+two new version of codes is used to train. that is 1007 and 1008
+the difference between 1007 and 1008 is whether offical spectral norm in pytorch is used. the hand-written SN is used in 1007 and official SN is applied
+in 1008 in order to compare and figure out if I make mistake in code of Spectral normalization.
+
 217th 
 ![ v1008 217th epoch  v1000a   SNGANanime256](https://user-images.githubusercontent.com/44658049/116780902-57496980-aaba-11eb-9157-eff9ddccecd1.png)
 218th 
