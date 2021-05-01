@@ -21,16 +21,16 @@ path = os.path.abspath('../../dataset/GetChu_aligned2/')
 img_size = 256
 noise_size = 128
 # im_chann=3
-bat_size = 10
+bat_size = 8
 tr_epoch = 200000
 worker = 2
 gpu = True
 # clamp_num=0.01
-learningr = 0.00001
-times_batch = 3
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-back_version = ' v1004 '  # 与上一版区别是换了hinge loss  GBlock为EM版
-version_p = ' v1000  '
+learningr = 0.0002
+times_batch = 8
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+back_version = ' v1004 '  # 与上一版区别是换了hinge loss  学习率提高  #大版本改代码结构和网络结构
+version_p = ' v1000d  '  # 比1000a的学习率提高   #小版本改参数  比b版再提高学习率 比c版提高batch 到64
 
 transform1 = transforms.Compose([
     transforms.Resize((img_size, img_size)),
@@ -78,15 +78,27 @@ class Generat(nn.Module):
         self.actf = nn.ReLU(inplace=True)
         self.tanhf = nn.Tanh()
 
-    def forward(self, z):
+    def forward(self, x):
         # if z is None:
         #    z = torch.randn(bat_size, self.dim_z).cuda()
         # if y is None:
         #    np_y = np.random.randint(0, self.num_classes, size=bat_size)
         #    y = torch.from_numpy(np_y).type(torch.LongTensor).cuda()
-        x = self.l1(z)
-        x = x.view(x.size(0), -1, self.bottom_width, self.bottom_width)
+        # x = self.l1(x)
+        # x = x.view(x.size(0), -1, self.bottom_width, self.bottom_width)
         # print(x.size())
+        # x = self.b1(x)
+        # x = self.b2(x)
+        # x = self.b3(x)
+        # x = self.b4(x)
+        # x = self.b5(x)
+        # x = self.b6(x)
+        # x = self.bn1(x)
+        # x = self.actf(x)
+        # x = self.con1(x)
+        # x = self.tanhf(x)
+        x = self.l1(x)
+        x = x.view(x.size(0), -1, self.bottom_width, self.bottom_width)
         x = self.b1(x)
         x = self.b2(x)
         x = self.b3(x)
@@ -154,7 +166,7 @@ mione = one * -1
 for epoch in range(tr_epoch):
     for i, data in enumerate(data_trainer, 0):
         if (i + 1) % 200 == 0:
-            print(i + 1)
+            print((i + 1)/times_batch)
         input = data
         noise = torch.randn(input.size(0), noise_size)
 
@@ -169,15 +181,24 @@ for epoch in range(tr_epoch):
 
         discriminator.zero_grad()
         ## train netd with real img
-        output = discriminator(input)#.mean().view(1)
+        dis_loss = discriminator(input)  # .mean().view(1)
         # if epoch>(tr_epoch-3):
         #    ioOut=np.append(ioOut,output.cpu().detach().numpy())
         # output.backward()
         ## train netd with fake img
         fake_pic = generator(noise).detach()
-        output2 = discriminator(fake_pic)#.mean().view(1)
+        gen_loss = discriminator(fake_pic)  # .mean().view(1)
         # outputloss = (output2 - output).mean().view(1)  #
-        outputloss = loss_hinge(output, output2)
+        outputloss = loss_hinge(dis_loss, gen_loss)
+
+        # if (i+1)%50 ==0:
+        #    print(outputloss)
+        #if (i + 1) < 200:
+        #    if (i + 1) % 2 == 0:
+        #        print(outputloss)
+        #else:
+        #    if (i + 1) % 50 == 0:
+        #        print(outputloss)
 
         if i == 0:
             discriminator.zero_grad()
