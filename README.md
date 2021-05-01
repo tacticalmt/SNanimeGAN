@@ -1,5 +1,6 @@
 # SNanimeGAN
-anime GAN with spectral normalization
+anime GAN with spectral normalization and hinge version of loss
+
 
 listed below are the experiments at 218th epoch
 ![218th epoch v1003 SNGANanime256](https://user-images.githubusercontent.com/44658049/115674086-4432ed00-a388-11eb-8827-c22fd05cf0a4.png)
