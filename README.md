@@ -22,4 +22,4 @@ in 1008 in order to compare and figure out if I make mistake in code of Spectral
 ![ v1008 219th epoch  v1000a   SNGANanime256](https://user-images.githubusercontent.com/44658049/116780906-5adcf080-aaba-11eb-8210-9509737defcf.png)
 here are the images generated at 217th 218th 219 epoches of code of version 1008
 
-I found a mistake in versions before 1006 which used avg_pool as globle sum layer for discriminator, and thus even at 218th epoch, it still did not gain any good performance 
+I found a mistake in versions before 1006 which used avg_pool as global sum layer for discriminator, and thus even at 218th epoch, it still did not gain any good performance 
