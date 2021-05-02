@@ -353,3 +353,37 @@ class SNDOptimizedBlock(nn.Module):
 
     def forward(self, x):
         return self.residual(x) + self.shortcut(x)
+
+
+class AttensionBlock(nn.Module):
+    def __init__(self,in_channel):
+        super(AttensionBlock, self).__init__()
+        self.in_channel=in_channel
+        self.query_conv=nn.Conv2d(in_channel,out_channels=in_channel/8,kernel_size=1)
+        self.key_conv=nn.Conv2d(in_channel,out_channels=in_channel/8,kernel_size=1)
+        self.value_conv=nn.Conv2d(in_channel,in_channel,kernel_size=1)
+        self.gamma=nn.parameter.Parameter(torch.zeros(1))
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self,x):
+        """
+                    inputs :
+                        x : input feature maps( B X C X W X H)
+                    returns :
+                        out : self attention value + input feature
+                        attention: B X N X N (N is Width*Height)
+
+                        thanks to https://github.com/heykeetae/Self-Attention-GAN/blob/8714a54ba5027d680190791ba3a6bb08f9c9a129/sagan_models.py#L8
+                """
+        m_batchsize, C, width, height = x.size()
+        proj_query = self.query_conv(x).view(m_batchsize, -1, width * height).permute(0, 2, 1)  # B X CX(N)
+        proj_key = self.key_conv(x).view(m_batchsize, -1, width * height)  # B X C x (*W*H)
+        energy = torch.bmm(proj_query, proj_key)  # transpose check
+        attention = self.softmax(energy)  # BX (N) X (N)
+        proj_value = self.value_conv(x).view(m_batchsize, -1, width * height)  # B X C X N
+
+        out = torch.bmm(proj_value, attention.permute(0, 2, 1))
+        out = out.view(m_batchsize, C, width, height)
+
+        out = self.gamma * out + x
+        return out, attention
