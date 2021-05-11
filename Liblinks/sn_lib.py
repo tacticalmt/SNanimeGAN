@@ -19,7 +19,7 @@ class ConditionBatchNorm2d(nn.BatchNorm2d):  # 条件BN层
                  track_running_stats=True):
         super(ConditionBatchNorm2d, self).__init__(num_features, eps, momentum, affine, track_running_stats)
 
-    def forward(self, input, weight, bias, **kwargs):
+    def forward(self, input, weight=None, bias=None, **kwargs):
         self._check_input_dim(input)
 
         exponential_average_factor = 0.0
@@ -45,14 +45,28 @@ class ConditionBatchNorm2d(nn.BatchNorm2d):  # 条件BN层
             self.running_var if not self.training or self.track_running_stats else None,
             self.weight, self.bias, bn_training, exponential_average_factor, self.eps)
 
-        if weight.dim() == 1:
-            weight = weight.unsqueeze(0)
-        if bias.dim() == 1:
-            bias = bias.unsqueeze(0)
-        size = output.size()
-        weight = weight.unsqueeze(-1).unsqueeze(-1).expand(size)
-        bias = bias.unsqueeze(-1).unsqueeze(-1).expand(size)
-        return weight * output + bias
+        if (weight is not None) and (bias is not None):
+            if weight.dim() == 1:
+                weight = weight.unsqueeze(0)
+            if bias.dim() == 1:
+                bias = bias.unsqueeze(0)
+            size = output.size()
+            weight = weight.unsqueeze(-1).unsqueeze(-1).expand(size)
+            bias = bias.unsqueeze(-1).unsqueeze(-1).expand(size)
+            return weight * output + bias
+        else:
+            return output
+
+
+
+        #if weight.dim() == 1:
+        #    weight = weight.unsqueeze(0)
+        #if bias.dim() == 1:
+        #    bias = bias.unsqueeze(0)
+        #size = output.size()
+        #weight = weight.unsqueeze(-1).unsqueeze(-1).expand(size)
+        #bias = bias.unsqueeze(-1).unsqueeze(-1).expand(size)
+        #return weight * output + bias
 
 
 class CategoricalConditionalBatchNorm2dAttr(ConditionBatchNorm2d):
@@ -69,10 +83,14 @@ class CategoricalConditionalBatchNorm2dAttr(ConditionBatchNorm2d):
         init.ones_(self.weights.weight.data)
         init.zeros_(self.biases.weight.data)
 
-    def forward(self, input, a, **kwargs):
-        weight = self.weights(a)
-        bias = self.biases(a)
-        return super(CategoricalConditionalBatchNorm2dAttr, self).forward(input, weight, bias)
+    def forward(self, input, a=None, **kwargs):
+        if a is not None:
+            weight = self.weights(a)
+            bias = self.biases(a)
+            return super(CategoricalConditionalBatchNorm2dAttr, self).forward(input, weight, bias)
+        else:
+            return super(CategoricalConditionalBatchNorm2dAttr, self).forward(input)
+
 
 
 class CategoricalConditionalBatchNorm2dEmbed(ConditionBatchNorm2d):
@@ -82,7 +100,6 @@ class CategoricalConditionalBatchNorm2dEmbed(ConditionBatchNorm2d):
                                                                      track_running_stats)
         self.weights = SNEmbedCLS(num_cls, num_features)
         self.biases = SNEmbedCLS(num_cls, num_features)
-
         self._initialize()
 
     def _initialize(self):
@@ -90,10 +107,13 @@ class CategoricalConditionalBatchNorm2dEmbed(ConditionBatchNorm2d):
         # init.zeros_(self.biases.weight.data)
         init.ones_(self.biases.weight.data)
 
-    def forward(self, input, a, **kwargs):
-        weight = self.weights(a)
-        bias = self.biases(a)
-        return super(CategoricalConditionalBatchNorm2dEmbed, self).forward(input, weight, bias)
+    def forward(self, input, a=None, **kwargs):
+        if a is not None:
+            weight = self.weights(a)
+            bias = self.biases(a)
+            return super(CategoricalConditionalBatchNorm2dEmbed, self).forward(input, weight, bias)
+        else:
+            return super(CategoricalConditionalBatchNorm2dEmbed, self).forward(input)
 
 
 class SNConv2d(nn.Conv2d):  # 2维卷积层

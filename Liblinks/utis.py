@@ -290,17 +290,61 @@ def get_tar_set(tar_class_index, all_labels, all_samples, seman_list, seman_inde
     return tar_data, np_tar_seman, np_tar_label
 
 
-def get_tar_set_np(tar_class_index, all_labels, all_samples, seman_feature, seman_index):
+def get_tar_set_np(tar_class_index, all_labels, all_samples, seman_feature, seman_index,train_ratio=0.8):
     tar_label = []
     tar_data = []
     tar_seman = []
+    test_data=[]
+    test_seman=[]
+    test_label=[]
+    check_list=[]
+    samp_count = 0
+    train_num=0
     for i_label, label in enumerate(all_labels):
         if label in tar_class_index:
+            if label not in check_list: #判断是否是第一次见这个类
+                check_list.append(label)
+                num_sample=countX(all_labels,label)
+                train_num=int(num_sample*train_ratio)
+                samp_count=0
             index_sm = np.argwhere(seman_index == label)  # 用于找内嵌的索引 np.argwhere
-            tar_seman.append(seman_feature[index_sm[0][0]])
-            tar_label.append(label)
-            tar_data.append((all_samples[i_label, :]))  # 取出对应位置的样本
+            samp_count = samp_count + 1
+            if samp_count<=train_num:
+                tar_seman.append(seman_feature[index_sm[0][0]])
+                tar_label.append(label)
+                tar_data.append((all_samples[i_label, :]))  # 取出对应位置的样本
+            else:
+                test_seman.append(seman_feature[index_sm[0][0]])
+                test_label.append(label)
+                test_data.append((all_samples[i_label, :]))
+
+
+
     np_tar_data = np.array(tar_data)
     np_tar_seman = np.array(tar_seman)
     np_tar_label = np.array(tar_label)
-    return np_tar_data, np_tar_seman, np_tar_label
+    np_test_data=np.array(test_data)
+    np_test_seman=np.array(test_seman)
+    np_test_label=np.array(test_label)
+
+    return np_tar_data, np_tar_seman, np_tar_label,np_test_data,np_test_seman,np_test_label
+
+
+def gen_seman_label(label_dict,label_name,bat_size,label_dim):#label_dim语义类标的长度  #需要类标名字和类标字典
+    dict_len=len(label_dict)
+    name_len=len(label_name)
+    label_mat=np.zeros((bat_size,label_dim))
+    for i_bat in range(bat_size):
+        random_index=np.random.randint(name_len)
+        label_mat[i_bat,:]=label_dict[label_name[random_index]]
+
+    return np.array(label_mat)
+
+#def countX(lst, x):
+#    return lst.count(x)
+def countX(lst, x):
+    count = 0
+    for ele in lst:
+        if (ele == x):
+            count = count + 1
+    return count
