@@ -33,3 +33,22 @@ the result at 1990+ epoches
 ![ v1008 2000th epoch  v1000a   SNGANanime256](https://user-images.githubusercontent.com/44658049/117770814-5958b880-b270-11eb-9173-a73d5e4d0787.png)
 ![ v1008 1997th epoch  v1000a   SNGANanime256](https://user-images.githubusercontent.com/44658049/117770824-5d84d600-b270-11eb-9bb1-6fadf9e5916f.png)
 
+image generated on v1015
+
+![ v1015cp 188th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420953-044af580-b6fb-11eb-8e8b-a4576e34f47c.png)
+![ v1015cp 189th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420955-057c2280-b6fb-11eb-9598-1791e1cdb869.png)
+![ v1015cp 187th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420958-0614b900-b6fb-11eb-9669-4a2f3ae6b7e3.png)
+
+on v1011
+
+![ v1011cp 361th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420968-0dd45d80-b6fb-11eb-9dba-766a00a0720b.png)
+![ v1011cp 360th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420971-0f058a80-b6fb-11eb-8442-d0e066063b6f.png)
+
+
+on v1016
+
+![ v1016CP 172th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420999-1cbb1000-b6fb-11eb-8946-047848f57e67.png)
+![ v1016CP 173th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118421002-1dec3d00-b6fb-11eb-8d56-8e16145efa8f.png)
+
+
+
