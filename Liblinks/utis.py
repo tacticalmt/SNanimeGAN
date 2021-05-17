@@ -46,7 +46,7 @@ def get_path_info(name_list, name_dict, root,
     for i, word in enumerate(name_list):
         # [path_dir.append(x.path) for x in os.scandir(tar_path) if x.name.endswith(word)]
         for x in os.scandir(tar_path):
-            if x.name.endswith(word) and word not in done_list:
+            if x.name.endswith(word) and (word not in done_list):
                 path_dir.append(x.path)
                 done_list.append(word)
         cl_info.append(name_dict[word])

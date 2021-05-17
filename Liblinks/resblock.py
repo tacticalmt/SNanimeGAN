@@ -137,7 +137,7 @@ def upsample_conv(x, conv):
 
 
 class GBlock2(nn.Module):  # 生成器的resblock2
-    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=(1, 1), upsample=False, n_cls=0):
+    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=(1, 1), upsample=False, n_cls=0,up_mode='bilinear'):
         super(GBlock2, self).__init__()
         self.upsample = upsample
         hidden_channel = out_channel if hidden_channel is None else hidden_channel
@@ -149,7 +149,7 @@ class GBlock2(nn.Module):  # 生成器的resblock2
                                       # nn.ConvTranspose2d(in_channel, hidden_channel, kernel_size=ksize, stride=2,
                                       #                   padding=pad,
                                       #                   output_padding=1),  # ？
-                                      nn.Upsample(scale_factor=2, mode='bilinear'),
+                                      nn.Upsample(scale_factor=2, mode=up_mode),
                                       nn.Conv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad),
                                       nn.BatchNorm2d(hidden_channel),
                                       nn.ReLU(inplace=True),
@@ -157,7 +157,7 @@ class GBlock2(nn.Module):  # 生成器的resblock2
                                       )
         if self.learnable_sc:
             if self.upsample:
-                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
+                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode=up_mode),
                                           nn.Conv2d(in_channel, out_channel, kernel_size=1, padding=0))
                 # nn.ConvTranspose2d(in_channel, out_channel, kernel_size=1, stride=2, padding=0,
                 #                   output_padding=1)  # ？
@@ -174,7 +174,7 @@ class GBlock2(nn.Module):  # 生成器的resblock2
         return self.residual(x) + self.shortcut(x)
 
 class SNGBlock(nn.Module):
-    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=(1, 1), upsample=False, n_cls=0):
+    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=(1, 1), upsample=False, n_cls=0,up_mode='bilinear'):
         super(SNGBlock, self).__init__()
         self.upsample = upsample
         hidden_channel = out_channel if hidden_channel is None else hidden_channel
@@ -186,7 +186,7 @@ class SNGBlock(nn.Module):
                                       # nn.ConvTranspose2d(in_channel, hidden_channel, kernel_size=ksize, stride=2,
                                       #                   padding=pad,
                                       #                   output_padding=1),  # ？
-                                      nn.Upsample(scale_factor=2, mode='bilinear'),
+                                      nn.Upsample(scale_factor=2, mode=up_mode),
                                       spectral_norm(nn.Conv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad)),
                                       nn.BatchNorm2d(hidden_channel),
                                       nn.ReLU(inplace=True),
@@ -194,7 +194,7 @@ class SNGBlock(nn.Module):
                                       )
         if self.learnable_sc:
             if self.upsample:
-                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
+                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode=up_mode),
                                           spectral_norm(nn.Conv2d(in_channel, out_channel, kernel_size=1, padding=0)))
                 # nn.ConvTranspose2d(in_channel, out_channel, kernel_size=1, stride=2, padding=0,
                 #                   output_padding=1)  # ？
@@ -213,7 +213,7 @@ class SNGBlock(nn.Module):
 
 
 class GBlockEm(nn.Module):  # 可以输入条件类标的，带有条件BN层的reblock
-    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=1, upsample=False, num_em=0):
+    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=1, upsample=False, num_em=0,up_mode='bilinear'):
         super(GBlockEm, self).__init__()
         self.upsample = upsample
         hidden_channel = out_channel if hidden_channel is None else hidden_channel
@@ -222,7 +222,7 @@ class GBlockEm(nn.Module):  # 可以输入条件类标的，带有条件BN层的
         self.act1 = nn.ReLU(inplace=True)
         self.act2 = nn.ReLU(inplace=True)
         if self.upsample:
-            self.c1 = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
+            self.c1 = nn.Sequential(nn.Upsample(scale_factor=2, mode=up_mode),
                                     nn.Conv2d(in_channel, out_channel, kernel_size=ksize, padding=pad))
         else:
             self.c1 = nn.Conv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad)
@@ -237,7 +237,7 @@ class GBlockEm(nn.Module):  # 可以输入条件类标的，带有条件BN层的
 
         if self.learnable_sc:
             if self.upsample:
-                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
+                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode=up_mode),
                                           nn.Conv2d(in_channel, out_channel, kernel_size=1, padding=0))
             else:
                 self.c_sc = nn.Conv2d(in_channel, out_channel, kernel_size=1, padding=0)
@@ -264,7 +264,7 @@ class GBlockEm(nn.Module):  # 可以输入条件类标的，带有条件BN层的
 
 
 class GBlockAttr(nn.Module):
-    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=1, upsample=False, num_attr=0):
+    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=1, upsample=False, num_attr=0,up_mode='bilinear'):
         super(GBlockAttr, self).__init__()
         self.upsample = upsample
         hidden_channel = out_channel if hidden_channel is None else hidden_channel
@@ -273,7 +273,7 @@ class GBlockAttr(nn.Module):
         self.act1 = nn.ReLU(inplace=True)
         self.act2 = nn.ReLU(inplace=True)
         if self.upsample:
-            self.c1 = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
+            self.c1 = nn.Sequential(nn.Upsample(scale_factor=2, mode=up_mode),
                                     nn.Conv2d(in_channel, out_channel, kernel_size=ksize, padding=pad))
         else:
             self.c1 = nn.Conv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad)
@@ -288,7 +288,7 @@ class GBlockAttr(nn.Module):
 
         if self.learnable_sc:
             if self.upsample:
-                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
+                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode=up_mode),
                                           nn.Conv2d(in_channel, out_channel, kernel_size=(1, 1), padding=(0, 0)))
             else:
                 self.c_sc = nn.Conv2d(in_channel, out_channel, kernel_size=(1, 1), padding=(0, 0))
@@ -316,7 +316,7 @@ class GBlockAttr(nn.Module):
         return self.residual(x, y, **kwargs) + self.shotcut(x)
 
 class SNGBlockAttr(nn.Module):
-    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=1, upsample=False, num_attr=0):
+    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=1, upsample=False, num_attr=0,up_mode='bilinear'):
         super(SNGBlockAttr, self).__init__()
         self.upsample = upsample
         hidden_channel = out_channel if hidden_channel is None else hidden_channel
@@ -325,7 +325,7 @@ class SNGBlockAttr(nn.Module):
         self.act1 = nn.ReLU(inplace=True)
         self.act2 = nn.ReLU(inplace=True)
         if self.upsample:
-            self.c1 = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
+            self.c1 = nn.Sequential(nn.Upsample(scale_factor=2, mode=up_mode),
                                     spectral_norm(nn.Conv2d(in_channel, out_channel, kernel_size=ksize, padding=pad)))
         else:
             self.c1 = spectral_norm(nn.Conv2d(in_channel, hidden_channel, kernel_size=ksize, padding=pad))
@@ -340,7 +340,7 @@ class SNGBlockAttr(nn.Module):
 
         if self.learnable_sc:
             if self.upsample:
-                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
+                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode=up_mode),
                                           spectral_norm(nn.Conv2d(in_channel, out_channel, kernel_size=(1, 1), padding=(0, 0))))
             else:
                 self.c_sc = spectral_norm(nn.Conv2d(in_channel, out_channel, kernel_size=(1, 1), padding=(0, 0)))
@@ -370,7 +370,7 @@ class SNGBlockAttr(nn.Module):
 
 
 class GBlockAttrDeconv(nn.Module):
-    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=1, upsample=False, num_attr=0):
+    def __init__(self, in_channel, out_channel, hidden_channel=None, ksize=(3, 3), pad=1, upsample=False, num_attr=0,up_mode='bilinear'):
         super(GBlockAttrDeconv, self).__init__()
         self.upsample = upsample
         hidden_channel = out_channel if hidden_channel is None else hidden_channel
@@ -397,7 +397,7 @@ class GBlockAttrDeconv(nn.Module):
 
         if self.learnable_sc:
             if self.upsample:
-                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode='bilinear'),
+                self.c_sc = nn.Sequential(nn.Upsample(scale_factor=2, mode=up_mode),
                                           nn.Conv2d(in_channel, out_channel, kernel_size=(1, 1), padding=(0, 0)))
             else:
                 self.c_sc = nn.Conv2d(in_channel, out_channel, kernel_size=(1, 1), padding=(0, 0))
