@@ -22,33 +22,44 @@ path = os.path.abspath('../../dataset/GetChu_aligned2/')
 img_size = 128
 noise_size = 128
 # im_chann=3
-bat_size = 32
-tr_epoch = 2000
+bat_size = 8
+tr_epoch = 2500
 worker = 2
 # clamp_num=0.01
 learningr = 0.0002
-times_batch = 2
-os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+times_batch = 8
+os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 gpu = True
-back_version = ' v1011cp '  # 用官方SN  +attention  生成器用SN
-version_p = ' v1000b  '  #
+back_version = ' v1015cp '  # 用官方SN  生成器用SN  判别器官方SN attention放在64*64层
+version_p = ' v1000b  '  #  换个上采样方式  生成器有权重衰减
 
-transform1 = transforms.Compose([
-    transforms.Resize((img_size, img_size)),
-    transforms.ToTensor(),
-    # transforms.Normalize([0.5]*3,[0.5]*3)
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-])
+
+
+
+transform_todata=transforms.Compose([transforms.RandomCrop(img_size),transforms.ToTensor(),
+    transforms.Normalize([0.5] * 3, [0.5] * 3)])
+
+
 
 
 class Gan_data(Dataset):
-    def __init__(self, root, transform, augment=None):
+    def __init__(self, root, transform, augment=None,img_size=256):
         self.image_files = np.array([x.path for x in os.scandir(root) if x.name.endswith(".jpg")])
         self.transform = transform
         self.augment = augment
+        self.img_size=img_size
 
     def __getitem__(self, index):
-        return self.transform(Image.open(self.image_files[index]))
+        img_data = Image.open(self.image_files[index])
+        dimw, dimh = img_data.size
+        div_num = min(dimw, dimh)  # 最小维度
+        ratio = div_num / self.img_size
+        scale_dimw = int(dimw / ratio)
+        scale_dimh = int(dimh / ratio)
+        te = transforms.functional.resize(img_data, [scale_dimh, scale_dimw])
+        pic_data = self.transform(te)
+        return pic_data
+
 
     def __len__(self):
         return len(self.image_files)
@@ -68,13 +79,14 @@ class Generat(nn.Module):
         super(Generat, self).__init__()
         self.l1 = nn.Linear(dim_z, (bottom_width ** 2) * channel * 16)
         # print(self.l1)
-        self.b1 = SNGBlock(channel * 16, channel * 16, upsample=True, n_cls=n_cls)  #8*8
-        self.b2 = SNGBlock(channel * 16, channel * 8, upsample=True, n_cls=n_cls)   #16*16
+        self.b1 = SNGBlock(channel * 16, channel * 16, upsample=True, n_cls=n_cls,up_mode='nearest')  #8*8
+        self.b2 = SNGBlock(channel * 16, channel * 8, upsample=True, n_cls=n_cls,up_mode='nearest')   #16*16
         #self.b3 = GBlock2(channel * 8, channel * 8, upsample=True, n_cls=n_cls)  #32*32
-        self.b4 = SNGBlock(channel * 8, channel * 4, upsample=True, n_cls=n_cls)   #64*64
-        self.atten=SNAttentionBlock(channel * 4)
-        self.b5 = SNGBlock(channel * 4, channel * 2, upsample=True, n_cls=n_cls)   #128*128
-        self.b6 = SNGBlock(channel * 2, channel, upsample=True, n_cls=n_cls)
+        self.b4 = SNGBlock(channel * 8, channel * 4, upsample=True, n_cls=n_cls,up_mode='nearest')   #64*64
+
+        self.b5 = SNGBlock(channel * 4, channel * 2, upsample=True, n_cls=n_cls,up_mode='nearest')   #128*128
+        self.atten = SNAttentionBlock(channel * 2)
+        self.b6 = SNGBlock(channel * 2, channel, upsample=True, n_cls=n_cls,up_mode='nearest')
         self.bn1 = nn.BatchNorm2d(channel)
         self.con1 = spectral_norm(nn.Conv2d(channel, 3, kernel_size=3, stride=1, padding=1))
         self.actf = nn.ReLU(inplace=True)
@@ -105,8 +117,8 @@ class Generat(nn.Module):
         x = self.b2(x)
         #x = self.b3(x)
         x = self.b4(x)
-        x=self.atten(x)
         x = self.b5(x)
+        x = self.atten(x)
         x = self.b6(x)
         x = self.bn1(x)
         x = self.actf(x)
@@ -119,8 +131,8 @@ class Discr_net(nn.Module):  # 用这个
     def __init__(self, channel):
         super(Discr_net, self).__init__()
         self.CNN = nn.Sequential(SNDOptimizedBlock(3, channel),  #64*64
+                                 SNAttentionBlock(channel),
                                  SNDBlock(channel, channel * 2, downsample=True),  #32*32
-                                 SNAttentionBlock(channel * 2),
                                  SNDBlock(channel * 2, channel * 4, downsample=True),
                                  SNDBlock(channel * 4, channel * 8, downsample=True),
                                  SNDBlock(channel * 8, channel * 16, downsample=True),
@@ -128,8 +140,8 @@ class Discr_net(nn.Module):  # 用这个
         #self.FC = nn.Sequential(SNLinear(channel * 16, 1024),
         #                        nn.ReLU(inplace=True)
         #                        )
-        self.FD = nn.Sequential(nn.ReLU(inplace=True), spectral_norm(nn.Linear(channel * 16, 1)))
-        #SNLinear(channel * 16, 1))
+        self.FD = nn.Sequential(nn.ReLU(inplace=True), SNLinear(channel * 16, 1))
+        #SNLinear(channel * 16, 1)) spectral_norm(nn.Linear(channel * 16, 1))
 
     def forward(self, x):
         x = self.CNN(x)
@@ -145,20 +157,20 @@ discriminator = Discr_net(64)
 generator = Generat()
 loss_hinge = HingeLoss()
 
-discriminator.load_state_dict(torch.load('./models/ v1011cp 82epoch v1000a  CPSNGANanimeDis128.pkl'))
-generator.load_state_dict(torch.load('./models/ v1011cp 82epoch v1000a  CPSNGANanimeGen128.pkl'))
-
 optimizerD = torch.optim.Adam(discriminator.parameters(), lr=learningr)
-optimizerG = torch.optim.Adam(generator.parameters(), lr=learningr)
+optimizerG = torch.optim.Adam(generator.parameters(), lr=learningr,weight_decay=1e-9)
 # optimizerD = RMSprop(discriminator.parameters(),lr=learningr)
 # optimizerG = RMSprop(generator.parameters(),lr=learningr)
+
+discriminator.load_state_dict(torch.load('./models/ v1015cp 39epoch v1000a  CPSNGANanimeDis128.pkl'))
+generator.load_state_dict(torch.load('./models/ v1015cp 39epoch v1000a  CPSNGANanimeGen128.pkl'))
 
 
 # 训练准备
 g_loss = []
 d_loss = []
 fix_noise = torch.randn(bat_size, noise_size)
-dataset = Gan_data(path, transform1)
+dataset = Gan_data(path, transform_todata,img_size=img_size)
 data_trainer = DataLoader(dataset, bat_size, shuffle=True, num_workers=worker)
 if gpu:
     fix_noise = fix_noise.cuda()
@@ -261,11 +273,13 @@ for epoch in range(tr_epoch):
     # np.savetxt('out.txt',ioOut)
     # np.savetxt('minmax.txt',minmax)
 
-    if (epoch + 1) % 2 == 0:
+    if (epoch + 1) % 3 == 0:
         torch.save(generator.state_dict(),
-                   './models/' + back_version + str(epoch + 1) + 'epoch' + version_p + 'CPSNGANanimeGen'+str(img_size)+'.pkl')
+                   './models/' + back_version + str(epoch + 1) + 'epoch' + version_p + 'CPSNGANanimeGen' + str(
+                       img_size) + '.pkl')
         torch.save(discriminator.state_dict(),
-                   './models/' + back_version + str(epoch + 1) + 'epoch' + version_p + 'CPSNGANanimeDis'+str(img_size)+'.pkl')
+                   './models/' + back_version + str(epoch + 1) + 'epoch' + version_p + 'CPSNGANanimeDis' + str(
+                       img_size) + '.pkl')
 
 np.save('./resultslog/'+back_version +version_p +'CPAnidisloss.npy', d_loss)
 np.save('./resultslog/'+back_version +version_p +'CPAnigenloss.npy', g_loss)
