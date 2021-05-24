@@ -35,20 +35,22 @@ the result at 1990+ epoches
 
 image generated on v1015
 
-![ v1015cp 188th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420953-044af580-b6fb-11eb-8e8b-a4576e34f47c.png)
-![ v1015cp 189th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420955-057c2280-b6fb-11eb-9598-1791e1cdb869.png)
-![ v1015cp 187th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420958-0614b900-b6fb-11eb-9669-4a2f3ae6b7e3.png)
+![ v1015cp 1074th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/119284051-bc3b4e00-bc79-11eb-99e0-0e696f025d51.png)
+![ v1015cp 1075th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/119284053-bd6c7b00-bc79-11eb-81c2-b848054ade29.png)
 
-on v1011
 
-![ v1011cp 361th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420968-0dd45d80-b6fb-11eb-9dba-766a00a0720b.png)
-![ v1011cp 360th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420971-0f058a80-b6fb-11eb-8442-d0e066063b6f.png)
+final results on v1011
+
+![ v1011cp 2000th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/119284037-afb6f580-bc79-11eb-913d-f841484ede82.png)
+![ v1011cp 1999th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/119284038-b180b900-bc79-11eb-8b39-a14864236f42.png)
+
 
 
 on v1016
 
-![ v1016CP 172th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118420999-1cbb1000-b6fb-11eb-8946-047848f57e67.png)
-![ v1016CP 173th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/118421002-1dec3d00-b6fb-11eb-8d56-8e16145efa8f.png)
+![ v1016CP 987th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/119284064-c3625c00-bc79-11eb-814d-7a3edfc397fa.png)
+![ v1016CP 988th epoch  v1000b   SNGANanime128](https://user-images.githubusercontent.com/44658049/119284079-ce1cf100-bc79-11eb-8326-7c5394b0a6bb.png)
+
 
 
 
